@@ -6,22 +6,28 @@
 #define HEIGHT 500
 #define FRAMES 60
 
-// Simple placeholder: Replace with soccer ball vertices later
+// Soccer ball-like truncated icosahedron (simplified)
 vec3_t vertices[] = {
-    {-1, -1, -1},
-    { 1, -1, -1},
-    { 1,  1, -1},
-    {-1,  1, -1},
-    {-1, -1,  1},
-    { 1, -1,  1},
-    { 1,  1,  1},
-    {-1,  1,  1}
+    {  0.000f,  0.000f,  1.000f },
+    {  0.894f,  0.000f,  0.447f },
+    {  0.276f,  0.851f,  0.447f },
+    { -0.724f,  0.526f,  0.447f },
+    { -0.724f, -0.526f,  0.447f },
+    {  0.276f, -0.851f,  0.447f },
+    {  0.724f,  0.526f, -0.447f },
+    { -0.276f,  0.851f, -0.447f },
+    { -0.894f,  0.000f, -0.447f },
+    { -0.276f, -0.851f, -0.447f },
+    {  0.724f, -0.526f, -0.447f },
+    {  0.000f,  0.000f, -1.000f }
 };
 
 int edges[][2] = {
-    {0, 1}, {1, 2}, {2, 3}, {3, 0},
-    {4, 5}, {5, 6}, {6, 7}, {7, 4},
-    {0, 4}, {1, 5}, {2, 6}, {3, 7}
+    {0, 1}, {0, 2}, {0, 3}, {0, 4}, {0, 5},
+    {1, 2}, {2, 3}, {3, 4}, {4, 5}, {5, 1},
+    {1, 6}, {2, 7}, {3, 8}, {4, 9}, {5, 10},
+    {6, 7}, {7, 8}, {8, 9}, {9, 10}, {10, 6},
+    {6, 11}, {7, 11}, {8, 11}, {9, 11}, {10, 11}
 };
 
 int main() {
@@ -48,7 +54,8 @@ int main() {
             vec3_t edge_dir = vec3_sub(v2, v1);
             float intensity = compute_lambert_intensity(edge_dir, light_dir);
 
-            if (clip_to_circular_viewport(canvas, v1.x, v1.y) && clip_to_circular_viewport(canvas, v2.x, v2.y)) {
+            if (clip_to_circular_viewport(canvas, v1.x, v1.y) &&
+                clip_to_circular_viewport(canvas, v2.x, v2.y)) {
                 draw_line_f(canvas, v1.x, v1.y, v2.x, v2.y, 1.0f * intensity);
             }
         }
