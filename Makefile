@@ -1,30 +1,20 @@
-CC = gcc
-CFLAGS = -Wall -Wextra -O3 -Iinclude
-LDFLAGS = -lm
+CC=gcc
+CFLAGS=-Iinclude -Wall -O2
+SRC=src/canvas.c src/math3d.c src/lighting.c src/renderer.c
+DEMO=demo/main.c
+OBJ=$(SRC:.c=.o)
+TARGET=build/demo
+#TEST=tests/test_math.c
+#TARGET=build/test_math
+all: $(TARGET)
 
-SRC_DIR = src
-BUILD_DIR = build
-DEMO_DIR = demo
-
-SRCS = $(wildcard $(SRC_DIR)/*.c)
-OBJS = $(patsubst $(SRC_DIR)/%.c,$(BUILD_DIR)/%.o,$(SRCS))
-
-LIB_NAME = libtiny3d.a
-DEMO_NAME = demo
-
-all: $(BUILD_DIR)/$(LIB_NAME) $(DEMO_DIR)/$(DEMO_NAME)
-
-$(BUILD_DIR)/$(LIB_NAME): $(OBJS)
-	ar rcs $@ $^
-
-$(BUILD_DIR)/%.o: $(SRC_DIR)/%.c
-	@mkdir -p $(BUILD_DIR)
-	$(CC) $(CFLAGS) -c $< -o $@
-
-$(DEMO_DIR)/$(DEMO_NAME): $(DEMO_DIR)/main.c $(BUILD_DIR)/$(LIB_NAME)
-	$(CC) $(CFLAGS) $< -o $@ -L$(BUILD_DIR) -ltiny3d $(LDFLAGS)
+$(TARGET): $(SRC) $(DEMO)
+	$(CC) $(CFLAGS) $(SRC) $(DEMO) -o $(TARGET) -lm
 
 clean:
-	rm -rf $(BUILD_DIR) $(DEMO_DIR)/$(DEMO_NAME)
+	rm -f $(TARGET) $(OBJ)
 
-.PHONY: all clean
+run: all
+	./$(TARGET)
+#$(TARGET): $(SRC) $(TEST)
+#	$(CC) $(CFLAGS) $(SRC) $(TEST) -o $(TARGET) -lm

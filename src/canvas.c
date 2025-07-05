@@ -1,72 +1,75 @@
 #include "canvas.h"
 #include <stdlib.h>
 #include <math.h>
-#include <stdio.h>
 
 canvas_t* create_canvas(int width, int height) {
     canvas_t* canvas = (canvas_t*)malloc(sizeof(canvas_t));
     canvas->width = width;
     canvas->height = height;
     
-    // Allocate memory for the pixel array
+    // Allocate pixel rows
     canvas->pixels = (float**)malloc(height * sizeof(float*));
-    for (int i = 0; i < height; i++) {
-        canvas->pixels[i] = (float*)calloc(width, sizeof(float));
+    
+    // Allocate each row
+    for (int y = 0; y < height; y++) {
+        canvas->pixels[y] = (float*)calloc(width, sizeof(float));
     }
     
     return canvas;
 }
 
-void destroy_canvas(canvas_t* canvas) {
-    if (canvas) {
-        for (int i = 0; i < canvas->height; i++) {
-            free(canvas->pixels[i]);
+void free_canvas(canvas_t* canvas) {
+    if (!canvas) return;
+    
+    // Free each row
+    for (int y = 0; y < canvas->height; y++) {
+        free(canvas->pixels[y]);
+    }
+    
+    // Free row pointers
+    free(canvas->pixels);
+    free(canvas);
+}
+
+void clear_canvas(canvas_t* canvas, float brightness) {
+    for (int y = 0; y < canvas->height; y++) {
+        for (int x = 0; x < canvas->width; x++) {
+            canvas->pixels[y][x] = brightness;
         }
-        free(canvas->pixels);
-        free(canvas);
     }
 }
 
 void set_pixel_f(canvas_t* canvas, float x, float y, float intensity) {
-    if (!canvas || x < 0 || y < 0 || x >= canvas->width || y >= canvas->height) {
-        return;
-    }
+    if (!canvas) return;
     
     // Bilinear filtering implementation
     int x0 = (int)floor(x);
     int y0 = (int)floor(y);
-    int x1 = x0 + 1;
-    int y1 = y0 + 1;
+    float dx = x - x0;
+    float dy = y - y0;
     
-    float x_frac = x - x0;
-    float y_frac = y - y0;
-    
-    // Distribute intensity to surrounding pixels
-    if (x0 >= 0 && x0 < canvas->width && y0 >= 0 && y0 < canvas->height) {
-        canvas->pixels[y0][x0] += intensity * (1 - x_frac) * (1 - y_frac);
-    }
-    if (x1 >= 0 && x1 < canvas->width && y0 >= 0 && y0 < canvas->height) {
-        canvas->pixels[y0][x1] += intensity * x_frac * (1 - y_frac);
-    }
-    if (x0 >= 0 && x0 < canvas->width && y1 >= 0 && y1 < canvas->height) {
-        canvas->pixels[y1][x0] += intensity * (1 - x_frac) * y_frac;
-    }
-    if (x1 >= 0 && x1 < canvas->width && y1 >= 0 && y1 < canvas->height) {
-        canvas->pixels[y1][x1] += intensity * x_frac * y_frac;
+    // Distribute intensity to 4 neighboring pixels
+    for (int i = 0; i <= 1; i++) {
+        for (int j = 0; j <= 1; j++) {
+            int px = x0 + i;
+            int py = y0 + j;
+            
+            if (px >= 0 && px < canvas->width && py >= 0 && py < canvas->height) {
+                float weight = (i ? dx : 1-dx) * (j ? dy : 1-dy);
+                canvas->pixels[py][px] += intensity * weight;
+                
+                // Clamp to [0,1] range
+                if (canvas->pixels[py][px] > 1.0f) canvas->pixels[py][px] = 1.0f;
+            }
+        }
     }
 }
 
 void draw_line_f(canvas_t* canvas, float x0, float y0, float x1, float y1, float thickness) {
-    // DDA algorithm implementation
+    // DDA line algorithm implementation
     float dx = x1 - x0;
     float dy = y1 - y0;
-    float steps = fmaxf(fabsf(dx), fabsf(dy));
-    
-    if (steps == 0) {
-        // Single point
-        set_pixel_f(canvas, x0, y0, 1.0f);
-        return;
-    }
+    float steps = fmax(fabs(dx), fabs(dy));
     
     float xInc = dx / steps;
     float yInc = dy / steps;
@@ -74,43 +77,18 @@ void draw_line_f(canvas_t* canvas, float x0, float y0, float x1, float y1, float
     float x = x0;
     float y = y0;
     
-    // Handle thickness by drawing multiple parallel lines
-    if (thickness > 1.0f) {
-        float perpX = -dy / steps;
-        float perpY = dx / steps;
-        float halfThickness = thickness / 2.0f;
-        
-        for (int i = 0; i <= steps; i++) {
-            // Draw a perpendicular line segment at each point
-            float startX = x - perpX * halfThickness;
-            float startY = y - perpY * halfThickness;
-            float endX = x + perpX * halfThickness;
-            float endY = y + perpY * halfThickness;
-            
-            // Draw the perpendicular segment
-            float segSteps = fmaxf(fabsf(endX - startX), fabsf(endY - startY));
-            if (segSteps > 0) {
-                float segX = startX;
-                float segY = startY;
-                float segXInc = (endX - startX) / segSteps;
-                float segYInc = (endY - startY) / segSteps;
-                
-                for (int j = 0; j <= segSteps; j++) {
-                    set_pixel_f(canvas, segX, segY, 1.0f);
-                    segX += segXInc;
-                    segY += segYInc;
+    for (int i = 0; i <= steps; i++) {
+        // Draw with thickness by drawing multiple pixels around the line
+        for (float t = -thickness/2; t <= thickness/2; t += 0.5f) {
+            for (float s = -thickness/2; s <= thickness/2; s += 0.5f) {
+                float dist = sqrt(t*t + s*s);
+                if (dist <= thickness/2) {
+                    set_pixel_f(canvas, x + t, y + s, 1.0f);
                 }
             }
-            
-            x += xInc;
-            y += yInc;
         }
-    } else {
-        // Thin line
-        for (int i = 0; i <= steps; i++) {
-            set_pixel_f(canvas, x, y, 1.0f);
-            x += xInc;
-            y += yInc;
-        }
+        
+        x += xInc;
+        y += yInc;
     }
 }

@@ -1,32 +1,35 @@
 #ifndef RENDERER_H
 #define RENDERER_H
 
-#include "canvas.h"
+#include "tiny3d.h"
 #include "math3d.h"
 
+/* Vertex projection */
+void project_vertex(mat4_t mvp, vec3_t vertex, float* screen_x, float* screen_y);
+
+/* Viewport clipping */
+int clip_to_circular_viewport(canvas_t* canvas, float x, float y);
+
+/* Wireframe rendering */
+void render_wireframe(
+    canvas_t* canvas,
+    mat4_t mvp,
+    vec3_t* vertices,
+    int vertex_count,
+    int* edges,
+    int edge_count,
+    float thickness
+);
+
+/* Depth buffer (optional for bonus) */
 typedef struct {
-    vec3_t position;
-    vec3_t rotation;
-    vec3_t scale;
-    mat4_t transform;
-} object3d_t;
+    float* buffer;
+    int width;
+    int height;
+} z_buffer_t;
 
-typedef struct {
-    vec3_t* vertices;
-    int* edges; // Pairs of vertex indices
-    int vertex_count;
-    int edge_count;
-} mesh_t;
-
-// Projection functions
-vec3_t project_vertex(mat4_t view_proj, vec3_t vertex, int screen_width, int screen_height);
-bool clip_to_circular_viewport(canvas_t* canvas, float x, float y, float radius);
-
-// Rendering functions
-void render_wireframe(canvas_t* canvas, mat4_t view_proj, mesh_t* mesh);
-
-// Mesh generation
-mesh_t generate_cube();
-mesh_t generate_soccer_ball();
+void init_z_buffer(z_buffer_t* zbuf, int width, int height);
+void free_z_buffer(z_buffer_t* zbuf);
+int z_buffer_test(z_buffer_t* zbuf, int x, int y, float depth);
 
 #endif // RENDERER_H
