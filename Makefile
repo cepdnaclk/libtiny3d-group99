@@ -1,28 +1,30 @@
 CC = gcc
-CFLAGS = -Iinclude -Wall -O2
+CFLAGS = -Wall -Wextra -O3 -Iinclude
 LDFLAGS = -lm
+
 SRC_DIR = src
 BUILD_DIR = build
+DEMO_DIR = demo
 
-# Core objects
-CORE_OBJS = canvas.o math3d.o renderer.o lighting.o
+SRCS = $(wildcard $(SRC_DIR)/*.c)
+OBJS = $(patsubst $(SRC_DIR)/%.c,$(BUILD_DIR)/%.o,$(SRCS))
 
-# Targets
-all: $(BUILD_DIR)/libtiny3d.a demo
+LIB_NAME = libtiny3d.a
+DEMO_NAME = demo
 
-$(BUILD_DIR):
-	mkdir -p $(BUILD_DIR)
+all: $(BUILD_DIR)/$(LIB_NAME) $(DEMO_DIR)/$(DEMO_NAME)
 
-$(BUILD_DIR)/%.o: $(SRC_DIR)/%.c | $(BUILD_DIR)
-	$(CC) $(CFLAGS) -c $< -o $@
-
-$(BUILD_DIR)/libtiny3d.a: $(addprefix $(BUILD_DIR)/, $(CORE_OBJS))
+$(BUILD_DIR)/$(LIB_NAME): $(OBJS)
 	ar rcs $@ $^
 
-demo: main.c $(BUILD_DIR)/libtiny3d.a
-	$(CC) $(CFLAGS) -o $@ $^ $(LDFLAGS)
+$(BUILD_DIR)/%.o: $(SRC_DIR)/%.c
+	@mkdir -p $(BUILD_DIR)
+	$(CC) $(CFLAGS) -c $< -o $@
+
+$(DEMO_DIR)/$(DEMO_NAME): $(DEMO_DIR)/main.c $(BUILD_DIR)/$(LIB_NAME)
+	$(CC) $(CFLAGS) $< -o $@ -L$(BUILD_DIR) -ltiny3d $(LDFLAGS)
 
 clean:
-	rm -rf $(BUILD_DIR) demo
+	rm -rf $(BUILD_DIR) $(DEMO_DIR)/$(DEMO_NAME)
 
 .PHONY: all clean
